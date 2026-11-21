@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:supabase": "node test-supabase.js"
+    "test:supabase": "node db/test-supabase.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
