@@ -13,10 +13,11 @@ const Home = () => {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   function beginJourney() {
-    if (goal.trim()) {
-      setMessage("Goal received.");
-    }
-    router.push("/TaskPicker");
+    const trimmed = goal.trim();
+    if (!trimmed) return; // don't navigate with an empty goal
+
+    setMessage("Goal received.");
+    router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
   }
 
   return (
@@ -24,11 +25,7 @@ const Home = () => {
       <ForestScene />
 
       <header className="topbar">
-        <a
-          className="brand"
-          href={import.meta.env.BASE_URL}
-          aria-label="RabbitHole home"
-        >
+        <a className="brand" href="/" aria-label="RabbitHole home">
           <RabbitMark />
           <span>RabbitHole</span>
         </a>
@@ -88,9 +85,7 @@ const Home = () => {
       </main>
 
       <footer className="site-footer">
-        <a href={`${import.meta.env.BASE_URL}art-credits.txt`}>
-          Art credits
-        </a>
+        <a href="/art-credits.txt">Art credits</a>
       </footer>
 
       {isSignInOpen && (
