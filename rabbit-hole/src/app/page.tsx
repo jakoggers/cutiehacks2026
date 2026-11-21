@@ -1,5 +1,8 @@
 "use client"
 
+// import { BrowserRouter, Routes, Route } from "react-router";
+// import DashboardPreview from "@/src/app/Dashboard/DashboardPreview";
+
 import "@/src/app/globals.css"
 import { useState } from "react";
 import ForestScene from "@/src/components/Home/forestScene";
@@ -19,6 +22,18 @@ const Home = () => {
     setMessage("Goal received.");
     router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
   }
+
+  // return (
+  //   <BrowserRouter>
+  //     <Routes>
+  //       <Route path="/dashboard" element={<DashboardPreview />} />
+  //       <Route
+  //         path="/dashboard-preview"
+  //         element={<DashboardPreview />}
+  //       />
+  //     </Routes>
+  //   </BrowserRouter>
+  // );
 
   return (
     <div className="wonderland">
