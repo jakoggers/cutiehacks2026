@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useLocation } from "react-router";
-import { getDailyTasks } from "./journey-tasks";
+import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { fetchTasks, type Task } from "@/src/lib/tasksApi";
 
 const ranks = [
   { letter: "J", name: "Jack", difficulty: "Easy", minutes: 10 },
@@ -12,13 +13,8 @@ const ranks = [
 
 type Rank = (typeof ranks)[number]["letter"];
 
-export function readJourneyGoal(state: unknown): string {
-  return typeof state === "object" &&
-    state !== null &&
-    "goal" in state &&
-    typeof state.goal === "string"
-    ? state.goal.trim().slice(0, 240)
-    : "";
+function cleanGoal(raw: string | null): string {
+  return (raw ?? "").trim().slice(0, 240);
 }
 
 function SuitHeart() {
@@ -78,14 +74,33 @@ function CardCorner({ rank }: { rank: Rank }) {
 function TaskDeck({ goal }: { goal: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [selection, setSelection] = useState<Rank | null>(null);
-  const tasks = getDailyTasks(goal);
-  const pickedTask = selection
-    ? tasks[ranks.findIndex(({ letter }) => letter === selection)]
-    : null;
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setSelection(null);
+
+    fetchTasks(goal)
+      .then((result) => { if (!cancelled) setTasks(result); })
+      .catch((e) => { if (!cancelled) setError((e as Error).message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [goal, attempt]);
+
+  // Only show as many cards as tasks we got back (max 3)
+  const deck = ranks.slice(0, Math.min(ranks.length, tasks.length));
+  const pickedIndex = selection ? deck.findIndex(({ letter }) => letter === selection) : -1;
+  const pickedTask = pickedIndex >= 0 ? tasks[pickedIndex] : null;
 
   return (
     <main className="task-picker">
@@ -94,47 +109,86 @@ function TaskDeck({ goal }: { goal: string }) {
       </h1>
       <div className="task-goal">
         <p title={goal}>{goal}</p>
-        <Link to="/">Edit goal</Link>
+        <Link href="/">Edit goal</Link>
       </div>
 
-      <div className="task-deck" role="group" aria-label="Daily tasks, easiest to hardest">
-        {ranks.map(({ letter, name, difficulty, minutes }, index) => (
-          <button
-            className={`task-card task-card--${letter.toLowerCase()}`}
-            type="button"
-            key={letter}
-            aria-pressed={selection === letter}
-            aria-label={`${name} of hearts: ${tasks[index]}, ${difficulty}, about ${minutes} minutes`}
-            onClick={() => setSelection(letter)}
-          >
-            <CardCorner rank={letter} />
-            <span className="task-card-content">
-              <CourtEmblem rank={letter} />
-              <span className="task-card-title">{tasks[index]}</span>
-              <span className="task-card-details">
-                <span>{difficulty}</span>
-                <span>~{minutes} min</span>
-              </span>
-            </span>
-            <CardCorner rank={letter} />
+      {loading && (
+        <p className="task-confirmation" role="status">
+          Digging your rabbit hole…
+        </p>
+      )}
+
+      {!loading && error && (
+        <div className="task-confirmation" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={() => setAttempt((n) => n + 1)}>
+            Try again
           </button>
-        ))}
-      </div>
+        </div>
+      )}
 
-      <p className="task-confirmation" role="status">
-        {pickedTask && (
-          <>
-            Picked: <strong>{pickedTask}</strong>
-          </>
-        )}
-      </p>
+      {!loading && !error && (
+        <>
+          <div className="task-deck" role="group" aria-label="Daily tasks, easiest to hardest">
+            {deck.map(({ letter, name, difficulty, minutes }, index) => {
+              const task = tasks[index];
+              const time = task.estimated_complete_time || `~${minutes} min`;
+              return (
+                <button
+                  className={`task-card task-card--${letter.toLowerCase()}`}
+                  type="button"
+                  key={letter}
+                  aria-pressed={selection === letter}
+                  aria-label={`${name} of hearts: ${task.task_name}, ${difficulty}, ${time}`}
+                  onClick={() => setSelection(letter)}
+                >
+                  <CardCorner rank={letter} />
+                  <span className="task-card-content">
+                    <CourtEmblem rank={letter} />
+                    <span className="task-card-title">{task.task_name}</span>
+                    <span className="task-card-details">
+                      <span>{difficulty}</span>
+                      <span>{time}</span>
+                    </span>
+                  </span>
+                  <CardCorner rank={letter} />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="task-confirmation" role="status">
+            {pickedTask && (
+              <>
+                <p>
+                  Picked: <strong>{pickedTask.task_name}</strong>
+                </p>
+                <p>{pickedTask.description}</p>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </main>
   );
 }
 
-const TaskPicker = () => {
-  const goal = readJourneyGoal(useLocation().state);
-  return goal ? <TaskDeck key={goal} goal={goal} /> : <Navigate to="/" replace />;
+function TaskPickerContent() {
+  const router = useRouter();
+  const goal = cleanGoal(useSearchParams().get("goal"));
+
+  // No goal in the URL: send them back home (replaces <Navigate to="/" replace />)
+  useEffect(() => {
+    if (!goal) router.replace("/");
+  }, [goal, router]);
+
+  return goal ? <TaskDeck key={goal} goal={goal} /> : null;
 }
 
-export default TaskPicker;
+export default function TaskPickerPage() {
+  return (
+    <Suspense fallback={null}>
+      <TaskPickerContent />
+    </Suspense>
+  );
+}
