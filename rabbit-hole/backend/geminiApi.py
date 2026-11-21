@@ -1,9 +1,10 @@
 import os
 import json
 
+import httpx2
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 
 load_dotenv()
 
@@ -19,29 +20,66 @@ client = genai.Client(
     http_options=types.HttpOptions(timeout=60_000),  # 60 seconds, in milliseconds
 )
 
-# Select model
+# Main model first, then fallbacks in order
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+FALLBACK_MODELS = [
+    m.strip()
+    for m in os.getenv(
+        "GEMINI_FALLBACK_MODELS",
+        "gemini-3.1-flash-lite,gemini-3.8-flash",
+    ).split(",")
+    if m.strip()
+]
+MODELS = [MODEL] + [m for m in FALLBACK_MODELS if m != MODEL]
+
+# Error codes that mean "try another model"
+# 429 = rate limited, 500/503 = overloaded or server error, 404 = model not available
+RETRYABLE_CODES = {404, 429, 500, 503}
 
 
-def generate_json(prompt: str) -> dict:
-    """
-    Sends a prompt to Gemini and returns its response as a Python dictionary.
-
-    If Gemini returns a JSON array, it is wrapped as {"items": [...]}
-    so the result is always a dictionary.
-    """
-
-    if not prompt or not prompt.strip():
-        raise ValueError("Prompt cannot be empty")
-
-    response = client.models.generate_content(
-        model=MODEL,
+def _call_gemini(model: str, prompt: str):
+    return client.models.generate_content(
+        model=model,
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             temperature=0.2,
         ),
     )
+
+
+def generate_json(prompt: str) -> dict:
+    """
+    Sends a prompt to Gemini and returns its response as a Python dictionary.
+
+    Tries each model in MODELS until one succeeds. If Gemini returns a
+    JSON array, it is wrapped as {"items": [...]}.
+    """
+
+    if not prompt or not prompt.strip():
+        raise ValueError("Prompt cannot be empty")
+
+    last_error: Exception | None = None
+    response = None
+
+    for model in MODELS:
+        try:
+            response = _call_gemini(model, prompt)
+            print(f"[gemini] answered by {model}")
+            break
+        except errors.APIError as e:
+            if e.code in RETRYABLE_CODES:
+                print(f"[gemini] {model} failed ({e.code}), trying next model...")
+                last_error = e
+                continue
+            raise  # e.g. 400 bad request or 401/403 bad API key: switching won't help
+        except httpx2.TimeoutException as e:
+            print(f"[gemini] {model} timed out, trying next model...")
+            last_error = e
+            continue
+
+    if response is None:
+        raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
 
     if not response.text:
         raise ValueError("Gemini returned an empty response")

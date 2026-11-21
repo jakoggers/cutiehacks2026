@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from geminiApi import generate_json  # your existing function
+from geminiApi import generate_json
 
 app = FastAPI()
 
@@ -12,22 +12,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class PromptRequest(BaseModel):
-    prompt: str
-
-
-@app.post("/api/generate")
-def generate(req: PromptRequest) -> dict:
-    try:
-        return generate_json(req.prompt)
-    except ValueError as e:
-        # empty prompt, empty response, or invalid JSON from Gemini
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        # network/API errors from Gemini
-        raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
 
 TASKS_PROMPT = """
 Generate 3 small tasks that can help achieve this goal: {goal}
@@ -40,6 +24,11 @@ For each task include:
 Return a JSON object shaped like: {{"tasks": [ ... ]}}
 """
 
+
+class PromptRequest(BaseModel):
+    prompt: str
+
+
 @app.get("/")
 def root(goal: str = "learn to cook"):
     try:
@@ -47,4 +36,16 @@ def root(goal: str = "learn to cook"):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
+
+
+@app.post("/api/generate")
+def generate(req: PromptRequest) -> dict:
+    try:
+        return generate_json(req.prompt)
+    except ValueError as e:
+        # empty prompt, empty response, or invalid JSON from Gemini
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # network/API errors from Gemini
         raise HTTPException(status_code=502, detail=f"Gemini error: {e}")
