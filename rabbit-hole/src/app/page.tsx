@@ -40,7 +40,7 @@ const Home = () => {
       </header>
 
       <main className="hero">
-        <h1>
+        <h1 className="text-fuchsia-600">
           <span>Chase your dreams</span>
           <span>
             down the <strong>RabbitHole.</strong>
@@ -49,6 +49,7 @@ const Home = () => {
 
         <div className="goal-form">
           <input
+            className="text-[#775e7e]"
             aria-label="Your goal"
             name="goal"
             type="text"
@@ -83,10 +84,6 @@ const Home = () => {
           {message}
         </p>
       </main>
-
-      <footer className="site-footer">
-        <a href="/art-credits.txt">Art credits</a>
-      </footer>
 
       {isSignInOpen && (
         <dialog
