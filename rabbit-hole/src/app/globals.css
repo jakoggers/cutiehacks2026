@@ -232,7 +232,7 @@ body {
 .sign-in,
 .sign-in-dialog button {
   min-height: 38px;
-  padding: 0 14px;
+  padding: 5px 14px;
   border: 1px solid #ad8fac;
   border-radius: 5px;
   background: var(--paper);
