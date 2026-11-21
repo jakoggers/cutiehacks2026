@@ -1,4 +1,3 @@
-
 import os
 import json
 
@@ -15,21 +14,21 @@ if not api_key:
     raise RuntimeError("GEMINI_API_KEY is not set in .env")
 
 # Initialize Gemini client
-client = genai.Client(api_key=api_key)
+client = genai.Client(
+    api_key=api_key,
+    http_options=types.HttpOptions(timeout=60_000),  # 60 seconds, in milliseconds
+)
 
 # Select model
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 def generate_json(prompt: str) -> dict:
     """
     Sends a prompt to Gemini and returns its response as a Python dictionary.
 
-    Args:
-        prompt: Instructions describing what Gemini should generate.
-
-    Returns:
-        A Python dictionary containing Gemini's JSON response.
+    If Gemini returns a JSON array, it is wrapped as {"items": [...]}
+    so the result is always a dictionary.
     """
 
     if not prompt or not prompt.strip():
@@ -54,24 +53,26 @@ def generate_json(prompt: str) -> dict:
             f"Gemini returned invalid JSON: {response.text}"
         ) from e
 
+    # Gemini sometimes returns a list instead of an object: wrap it
+    if isinstance(result, list):
+        result = {"items": result}
+
     if not isinstance(result, dict):
-        raise ValueError("Gemini response must be a JSON object")
+        raise ValueError("Gemini response must be a JSON object or array")
 
     return result
 
 
 if __name__ == "__main__":
     prompt = """
-    Generate information about three popular programming languages.
+    Generate 3 small tasks that can help achieve a goal
 
-    For each language, include:
-    - name
-    - creator
-    - year_created
-    - primary_uses
+    For each task include:
+    - task_name
+    - estimated_complete_time
     - description
 
-    Return the information as a JSON object.
+    Return a JSON object shaped like: {"tasks": [ ... ]}
     """
 
     result = generate_json(prompt)
