@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 
 import httpx2
 from dotenv import load_dotenv
@@ -100,19 +101,56 @@ def generate_json(prompt: str) -> dict:
 
     return result
 
+def parse_tasks(tasks_json: str) -> tuple[list[dict], list[str]]:
+    """
+    Parses Gemini's tasks JSON string into values ready for Supabase.
+
+    Returns:
+        task_rows: rows for the tasks table -> [{"id": ..., "description": ...}, ...]
+        task_ids:  the id-only list         -> ["id1", "id2", "id3"]
+    """
+    data = json.loads(tasks_json)
+
+    raw_tasks = data.get("tasks") or data.get("items") or []
+
+    task_rows: list[dict] = []
+    for task in raw_tasks:
+        if not isinstance(task, dict):
+            continue
+        description = str(task.get("description", "")).strip()
+        if not description:
+            continue
+        task_rows.append({
+            "id": str(uuid.uuid4()),
+            "description": description,
+        })
+
+    task_ids = [row["id"] for row in task_rows]
+
+    return task_rows, task_ids
+
 
 if __name__ == "__main__":
     prompt = """
-    Generate 3 small tasks that can help achieve a goal
+    Generate 3 small tasks that can help achieve this goal: learn to cook
 
-    For each task include:
-    - task_name
-    - estimated_complete_time
-    - description
+    Order them from easiest to hardest.
+    Each task has only a description: one short, actionable sentence
+    (under 12 words).
 
-    Return a JSON object shaped like: {"tasks": [ ... ]}
+    Return a JSON object shaped like: {"tasks": [{"description": "..."}]}
     """
 
     result = generate_json(prompt)
+    tasks_json = json.dumps(result, indent=2)
 
-    print(json.dumps(result, indent=2))
+    task_rows, task_ids = parse_tasks(tasks_json)
+
+    print("Raw Gemini output:")
+    print(tasks_json)
+
+    print("\nRows for the tasks table:")
+    print(json.dumps(task_rows, indent=2))
+
+    print("\nTask id list:")
+    print(task_ids)
