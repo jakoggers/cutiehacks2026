@@ -5,19 +5,22 @@
 
 import "@/src/app/globals.css"
 import { useState } from "react";
+import Link from "next/link";
 import ForestScene from "@/src/components/Home/forestScene";
 import RabbitMark from "@/src/components/Home/rabbitMark";
 import { useRouter } from "next/navigation";
+import { signOut } from "@/src/lib/auth";
+import { useUser } from "@/src/lib/useUser";
 
 const Home = () => {
   const router = useRouter();
+  const { user, username, loading } = useUser();
   const [goal, setGoal] = useState("");
   const [message, setMessage] = useState("");
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   function beginJourney() {
     const trimmed = goal.trim();
-    if (!trimmed) return; // don't navigate with an empty goal
+    if (!trimmed) return;
 
     setMessage("Goal received.");
     router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
@@ -40,22 +43,28 @@ const Home = () => {
       <ForestScene />
 
       <header className="topbar">
-        <a className="brand" href="/" aria-label="RabbitHole home">
+        <Link className="brand" href="/" aria-label="RabbitHole home">
           <RabbitMark />
           <span>RabbitHole</span>
-        </a>
+        </Link>
 
-        <button
-          className="sign-in"
-          type="button"
-          onClick={() => setIsSignInOpen(true)}
-        >
-          Sign in
-        </button>
+        {!loading &&
+          (user ? (
+            <div className="topbar-user">
+              <span>Hi, {username}</span>
+              <button className="sign-in" type="button" onClick={() => signOut()}>
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <Link className="sign-in" href="/SignIn">
+              Sign in
+            </Link>
+          ))}
       </header>
 
       <main className="hero">
-        <h1 className="text-fuchsia-600">
+        <h1>
           <span>Chase your dreams</span>
           <span>
             down the <strong>RabbitHole.</strong>
@@ -64,7 +73,6 @@ const Home = () => {
 
         <div className="goal-form">
           <input
-            className="text-[#775e7e]"
             aria-label="Your goal"
             name="goal"
             type="text"
@@ -100,23 +108,9 @@ const Home = () => {
         </p>
       </main>
 
-      {isSignInOpen && (
-        <dialog
-          open
-          className="sign-in-dialog"
-          aria-labelledby="sign-in-title"
-        >
-          <h2 id="sign-in-title">Sign in</h2>
-          <p>Sign-in isn’t available yet.</p>
-
-          <button
-            type="button"
-            onClick={() => setIsSignInOpen(false)}
-          >
-            Close
-          </button>
-        </dialog>
-      )}
+      <footer className="site-footer">
+        <a href="/art-credits.txt">Art credits</a>
+      </footer>
     </div>
   );
 };
