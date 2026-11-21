@@ -1,8 +1,9 @@
 "use client"
 
+import "./home.css";
 import { useState } from "react";
-import ForestScene from "@/src/app/components/Home/forestScene";
-import RabbitMark from "@/src/app/components/Home/rabbitMark";
+import ForestScene from "@/src/components/Home/forestScene";
+import RabbitMark from "@/src/components/Home/rabbitMark";
 
 const Home = () => {
   const [goal, setGoal] = useState("");
