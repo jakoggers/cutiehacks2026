@@ -1,11 +1,13 @@
 "use client"
 
-import "./home.css";
+import "@/src/app/globals.css"
 import { useState } from "react";
 import ForestScene from "@/src/components/Home/forestScene";
 import RabbitMark from "@/src/components/Home/rabbitMark";
+import { useRouter } from "next/navigation";
 
 const Home = () => {
+  const router = useRouter();
   const [goal, setGoal] = useState("");
   const [message, setMessage] = useState("");
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -14,6 +16,7 @@ const Home = () => {
     if (goal.trim()) {
       setMessage("Goal received.");
     }
+    router.push("/TaskPicker");
   }
 
   return (

@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router";
 import { getDailyTasks } from "./journey-tasks";
@@ -130,7 +132,9 @@ function TaskDeck({ goal }: { goal: string }) {
   );
 }
 
-export function TaskPicker() {
+const TaskPicker = () => {
   const goal = readJourneyGoal(useLocation().state);
   return goal ? <TaskDeck key={goal} goal={goal} /> : <Navigate to="/" replace />;
 }
+
+export default TaskPicker;
