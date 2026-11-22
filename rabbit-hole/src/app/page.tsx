@@ -20,37 +20,73 @@ const Home = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
 
-  async function beginJourney(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmed = goal.trim();
-    if (!trimmed || isSaving) return;
 
-    setIsSaving(true);
-    setMessage("Saving your goal...");
+async function beginJourney(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
 
-    try {
-      const apiBaseUrl = (
-        process.env.NEXT_PUBLIC_TASKS_API_URL ?? "http://127.0.0.1:8000"
-      ).replace(/\/$/, "");
-      const response = await fetch(`${apiBaseUrl}/generate-tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: trimmed }),
-      });
+  const trimmed = goal.trim();
+  if (!trimmed || isSaving) return;
 
-      if (!response.ok) {
-        throw new Error(`Task API returned ${response.status}`);
-      }
+  setIsSaving(true);
+  setMessage("Generating your tasks...");
 
-      setMessage("Goal saved.");
-      router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
-    } catch (error) {
-      console.error("Could not save goal:", error);
-      setMessage("Could not save your goal. Please try again.");
-    } finally {
-      setIsSaving(false);
+  try {
+    const apiBaseUrl = (
+      process.env.NEXT_PUBLIC_TASKS_API_URL ?? "http://127.0.0.1:8000"
+    ).replace(/\/$/, "");
+
+    console.log("Sending request to:", `${apiBaseUrl}/generate-tasks`);
+
+    const response = await fetch(`${apiBaseUrl}/generate-tasks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ goal: trimmed }),
+    });
+
+    console.log("Backend response status:", response.status);
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        `Task API returned ${response.status}: ${
+          responseData.detail ?? JSON.stringify(responseData)
+        }`
+      );
     }
+
+    console.log("Generated tasks:", responseData);
+
+    if (!responseData.task_rows) {
+      throw new Error("Backend did not return task_rows.");
+    }
+
+    sessionStorage.setItem(
+      "pendingJourney",
+      JSON.stringify({
+        goal: trimmed,
+        tasks: responseData.task_rows,
+      })
+    );
+
+    setMessage("Tasks generated!");
+
+    router.push("/TaskPicker");
+  } catch (error) {
+    console.error("Could not generate tasks:", error);
+
+    setMessage(
+      error instanceof Error
+        ? error.message
+        : "Could not generate your tasks. Please try again."
+    );
+  } finally {
+    setIsSaving(false);
   }
+}
+
 
   // return (
   //   <BrowserRouter>

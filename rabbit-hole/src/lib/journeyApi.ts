@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Journey } from "@/src/components/Dashboard/JourneyContext";
+import type Journey from "@/src/components/Dashboard/JourneyContext";
 
 // Retrieve the logged-in user's journey
 export const fetchJourney = async (): Promise<Journey | null> => {

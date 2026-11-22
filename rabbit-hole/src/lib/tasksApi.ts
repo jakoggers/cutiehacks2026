@@ -1,10 +1,13 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+
 export interface Task {
+  id: string;
   task_name: string;
   estimated_complete_time: string;
   description: string;
 }
+
 
 export async function fetchTasks(goal: string): Promise<Task[]> {
   const res = await fetch(`${API_URL}/api/tasks`, {
