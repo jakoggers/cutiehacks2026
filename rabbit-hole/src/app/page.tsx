@@ -1,7 +1,7 @@
 "use client"
 
-// import { BrowserRouter, Routes, Route } from "react-router";
-// import DashboardPreview from "@/src/app/Dashboard/DashboardPreview";
+import { BrowserRouter, Routes, Route } from "react-router";
+import DashboardPreview from "@/src/app/Dashboard/DashboardPreview";
 
 import "@/src/app/globals.css";
 import { useState, type FormEvent } from "react";
