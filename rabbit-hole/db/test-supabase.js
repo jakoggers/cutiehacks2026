@@ -8,18 +8,18 @@ const supabase = createClient(
 
 async function testSupabaseConnection() {
   const { data, error } = await supabase
-    .from("tasks")
-    .select("*")
-    .limit(1);
+    .from("task")
+    .insert({
+      "task-name": "Finish homework"
+    })
+    .select()
+    .single();
 
   if (error) {
-    console.error("Supabase connection failed:");
-    console.error(error.message);
-    process.exit(1);
+    console.error("Insert failed:", error.message);
+  } else {
+    console.log("Task added:", data);
   }
-
-  console.log("Supabase connection successful!");
-  console.log("Returned data:", data);
 }
 
 testSupabaseConnection();

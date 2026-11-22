@@ -3,8 +3,8 @@
 // import { BrowserRouter, Routes, Route } from "react-router";
 // import DashboardPreview from "@/src/app/Dashboard/DashboardPreview";
 
-import "@/src/app/globals.css"
-import { useState } from "react";
+import "@/src/app/globals.css";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import ForestScene from "@/src/components/Home/forestScene";
 import RabbitMark from "@/src/components/Home/rabbitMark";
@@ -17,13 +17,39 @@ const Home = () => {
   const { user, username, loading } = useUser();
   const [goal, setGoal] = useState("");
   const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
-  function beginJourney() {
+  async function beginJourney(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     const trimmed = goal.trim();
-    if (!trimmed) return;
+    if (!trimmed || isSaving) return;
 
-    setMessage("Goal received.");
-    router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
+    setIsSaving(true);
+    setMessage("Saving your goal...");
+
+    try {
+      const apiBaseUrl = (
+        process.env.NEXT_PUBLIC_TASKS_API_URL ?? "http://127.0.0.1:8000"
+      ).replace(/\/$/, "");
+      const response = await fetch(`${apiBaseUrl}/generate-tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: trimmed }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Task API returned ${response.status}`);
+      }
+
+      setMessage("Goal saved.");
+      router.push(`/TaskPicker?goal=${encodeURIComponent(trimmed)}`);
+    } catch (error) {
+      console.error("Could not save goal:", error);
+      setMessage("Could not save your goal. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   // return (
@@ -71,7 +97,7 @@ const Home = () => {
           </span>
         </h1>
 
-        <div className="goal-form">
+        <form className="goal-form" onSubmit={beginJourney} aria-busy={isSaving}>
           <input
             className="text-[#775e7e]"
             aria-label="Your goal"
@@ -85,29 +111,34 @@ const Home = () => {
               setGoal(event.target.value);
               setMessage("");
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                beginJourney();
-              }
-            }}
           />
 
           <button
-            type="button"
-            aria-label="Begin your journey"
-            disabled={!goal.trim()}
-            onClick={beginJourney}
+            type="submit"
+            aria-label={isSaving ? "Saving your goal" : "Begin your journey"}
+            disabled={!goal.trim() || isSaving}
           >
             <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
               <path d="M7 2h2v2h2v2h2v2h-2V7H9v7H7V7H5v1H3V6h2V4h2z" />
             </svg>
           </button>
-        </div>
+        </form>
 
         <p className="goal-status" role="status">
           {message}
         </p>
       </main>
+
+      {isSignInOpen && (
+        <dialog open className="sign-in-dialog" aria-labelledby="sign-in-title">
+          <h2 id="sign-in-title">Sign in</h2>
+          <p>Sign-in isn’t available yet.</p>
+
+          <button type="button" onClick={() => setIsSignInOpen(false)}>
+            Close
+          </button>
+        </dialog>
+      )}
     </div>
   );
 };
