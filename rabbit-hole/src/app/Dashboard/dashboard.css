@@ -366,3 +366,27 @@
   align-items: center;
   text-decoration: none;
 }
+
+.guest-notice-container {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: start;
+  align-self: start;
+
+  position: relative;
+  z-index: 5;
+
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+
+  margin-top: 35px;
+  padding-left: 40px;
+}
+
+.guest-notice {
+  margin: 0;
+  text-align: left;
+  max-width: 450px;
+  line-height: 1.6;
+}

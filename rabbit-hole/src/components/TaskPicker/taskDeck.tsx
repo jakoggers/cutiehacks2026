@@ -3,8 +3,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type { Task } from "@/src/lib/tasksApi";
+import {
+  PROFILE_KEY,
+  type Profile,
+  type Task as JourneyTask,
+  type Rank as JourneyRank,
+} from "@/src/components/Dashboard/journey-model";
 
 import TaskCard from "./taskCard";
 import { ranks, type Rank } from "./taskTypes";
@@ -15,23 +22,59 @@ type TaskDeckProps = {
 };
 
 const TaskDeck = ({ goal, tasks }: TaskDeckProps) => {
+  const router = useRouter();
   const [selection, setSelection] = useState<Rank | null>(null);
 
-  // Focus the heading when the component loads.
   useEffect(() => {
     document
       .getElementById("task-picker-heading")
       ?.focus({ preventScroll: true });
   }, []);
 
-  // Only show as many cards as tasks received (maximum 3).
   const deck = ranks.slice(0, Math.min(ranks.length, tasks.length));
 
-  const pickedIndex = selection
-    ? deck.findIndex(({ letter }) => letter === selection)
-    : -1;
+  const handleSelect = (selectedTask: Task, letter: Rank) => {
+    setSelection(letter);
 
-  const pickedTask = pickedIndex >= 0 ? tasks[pickedIndex] : null;
+    // Put the selected task first so it appears as the current quest.
+    const orderedTasks = [
+      selectedTask,
+      ...tasks.filter((task) => task.id !== selectedTask.id),
+    ];
+
+    // Convert generated tasks into the Dashboard's task format.
+    const dashboardTasks: JourneyTask[] = orderedTasks.map(
+      (task, index) => ({
+        id: task.id || `guest-task-${index}`,
+        description: task.description || task.task_name,
+        rank: Math.min(index + 1, 3) as JourneyRank,
+      })
+    );
+
+    // Initial guest profile. These values are temporary demo data.
+    const guestProfile: Profile = {
+      id: "guest-demo",
+      goal,
+
+      tasks: dashboardTasks,
+      currTasks: dashboardTasks,
+
+      taskCompleted: dashboardTasks.map(() => 0),
+
+      numOfPhases: 3,
+      currPhase: 1,
+
+      currPet: 0,
+      petHappiness: 75,
+      streak: 1,
+      lastLogin: new Date().toISOString(),
+    };
+
+    // Save the profile so the Dashboard can load it without authentication.
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(guestProfile));
+
+    router.push("/Dashboard");
+  };
 
   return (
     <main className="task-picker">
@@ -64,22 +107,14 @@ const TaskDeck = ({ goal, tasks }: TaskDeckProps) => {
                 minutes={minutes}
                 task={tasks[index]}
                 selected={selection === letter}
-                onSelect={() => setSelection(letter)}
+                onSelect={() => handleSelect(tasks[index], letter)}
               />
             ))}
           </div>
 
-          <div className="task-confirmation" role="status">
-            {pickedTask && (
-              <>
-                <p>
-                  Picked: <strong>{pickedTask.task_name}</strong>
-                </p>
-
-                <p>{pickedTask.description}</p>
-              </>
-            )}
-          </div>
+          <p className="task-confirmation">
+            Select a card to begin your journey.
+          </p>
         </>
       )}
     </main>

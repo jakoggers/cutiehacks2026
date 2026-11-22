@@ -13,16 +13,8 @@ export type Task = {
 
 export type Profile = {
   id: string;
-  tasks: Task[];
-  currTasks: Task[];
-  taskCompleted: number[];
-  numOfPhases: number;
-  currPhase: number;
-  currPet: number;
-  petHappiness: number;
-  streak: number;
-  lastLogin: string;
-};
+  goal?: string;
+}
 
 export type User = {
   id: string;
